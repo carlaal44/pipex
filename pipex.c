@@ -6,15 +6,11 @@
 /*   By: carfern2 <carfern2@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/13 15:06:54 by carfern2          #+#    #+#             */
-/*   Updated: 2025/02/13 16:10:59 by carfern2         ###   ########.fr       */
+/*   Updated: 2025/02/17 15:19:55 by carfern2         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include "pipex.h"
 
 void	create_pipe(int *fd)
 {
@@ -25,25 +21,12 @@ void	create_pipe(int *fd)
 	}
 }
 
-void	setup_child(int *fd)
+void	execute_child(int *fd, char *cmd, char **envp, int infile_fd)
 {
-	int		status;
+	pid_t		pid;
+	char		*args[4];
 
-	status = dup2(fd[1], STDOUT_FILENO);
-	if (status == -1)
-	{
-		perror("dup2");
-		exit(1);
-	}
-	close(fd[0]);
-}
-
-void	execute_child(int *fd, char **envp)
-{
-	pid_t	pid;
-	char	*cmd[3];
-
-	write(1, "Exxecuting child process\n", 24);
+	prepare_args(cmd, args);
 	pid = fork();
 	if (pid == -1)
 	{
@@ -52,12 +35,10 @@ void	execute_child(int *fd, char **envp)
 	}
 	if (pid == 0)
 	{
-		write(1, "Inside child process\n", 22);
+		dup2(infile_fd, STDIN_FILENO);
+		close(infile_fd);
 		setup_child(fd);
-		cmd[0] = "/bin/ls";
-		cmd[1] = "-l";
-		cmd[2] = NULL;
-		if (execve(cmd[0], cmd, envp) == -1)
+		if (execve(args[0], args, envp) == -1)
 		{
 			perror("execve (child)");
 			exit(1);
@@ -65,43 +46,37 @@ void	execute_child(int *fd, char **envp)
 	}
 }
 
-void	execute_parent(int *fd, char **envp)
+void	execute_parent(t_pipex *data, char *outfile)
 {
-	int		status;
-	char	*cmd2[3];
-
-	write(1, "Waiting for child process\n", 27);
-	wait(NULL);
-	write(1, "Executing parent process\n", 26);
-	status = dup2(fd[0], STDIN_FILENO);
-	if (status == -1)
-	{
-		perror("dup2");
-		exit(1);
-	}
-	close(fd[0]);
-	close(fd[1]);
-	cmd2[0] = "/bin/ls";
-	cmd2[1] = "-l";
-	cmd2[2] = NULL;
-	if (execve(cmd2[0], cmd2, envp) == -1)
-	{
-		perror("execve (parent)");
-		exit(1);
-	}
+	wait(&data->status);
+	data->outfile_fd = open_outfile(outfile);
+	if (fork() == 0)
+		setup_parent_execution(data);
+	close(data->fd[0]);
+	close(data->fd[1]);
+	close(data->outfile_fd);
+	wait(&data->status);
 }
 
 int	main(int argc, char **argv, char **envp)
 {
-	int		fd[2];
+	t_pipex		data;
 
 	if (argc != 5)
 	{
 		write(2, "Usage: ./pipex file1 \"command1\" \"command2\" file2\n", 50);
 		return (1);
 	}
-	create_pipe(fd);
-	execute_child(fd, envp);
-	execute_child(fd, envp);
-	return (0);
+	data.envp = envp;
+	data.cmd = argv[3];
+	data.infile_fd = open(argv[1], O_RDONLY);
+	if (data.infile_fd < 0)
+	{
+		perror("open infile");
+		exit(1);
+	}
+	create_pipe(data.fd);
+	execute_child(data.fd, argv[2], envp, data.infile_fd);
+	execute_parent(&data, argv[4]);
+	return (WEXITSTATUS(data.status));
 }
