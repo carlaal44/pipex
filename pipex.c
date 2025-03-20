@@ -6,7 +6,7 @@
 /*   By: carfern2 <carfern2@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/13 15:06:54 by carfern2          #+#    #+#             */
-/*   Updated: 2025/02/18 08:52:35 by carfern2         ###   ########.fr       */
+/*   Updated: 2025/03/17 12:40:23 by carfern2         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,6 +55,7 @@ void	execute_parent(t_pipex *data, char *outfile)
 	close(data->fd[0]);
 	close(data->fd[1]);
 	close(data->outfile_fd);
+	close(data->infile_fd);
 	wait(&data->status);
 }
 

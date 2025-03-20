@@ -6,7 +6,7 @@
 /*   By: carfern2 <carfern2@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/17 09:04:00 by carfern2          #+#    #+#             */
-/*   Updated: 2025/02/17 14:41:21 by carfern2         ###   ########.fr       */
+/*   Updated: 2025/03/20 16:09:22 by carfern2         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,9 +67,9 @@ void	setup_parent_execution(t_pipex *data)
 
 	prepare_args(data->cmd, args);
 	setup_parent(data->fd, data->outfile_fd);
-	if (execvp(args[0], args) == -1)
+	if (execv(args[0], args) == -1)
 	{
-		perror("execvp (parent)");
+		perror("execv (parent)");
 		exit(127);
 	}
 }
