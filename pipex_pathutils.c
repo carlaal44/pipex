@@ -6,62 +6,83 @@
 /*   By: carfern2 <carfern2@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/20 15:44:37 by carfern2          #+#    #+#             */
-/*   Updated: 2025/03/20 16:08:40 by carfern2         ###   ########.fr       */
+/*   Updated: 2025/05/30 12:24:40 by carfern2         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
+#include "libft.h"
 
 static char	*check_directories(char *cmd, char **paths)
 {
 	int		i;
-	char	full_path[1024];
+	char	*full_path;
+	int		len;
 
 	i = 0;
 	while (paths[i])
 	{
-		snprintf(full_path, sizeof(full_path), "%s/%s", paths[i], cmd);
+		len = ft_strlen(paths[i]) + ft_strlen(cmd) + 2;
+		full_path = malloc(sizeof(char) * len);
+		if (!full_path)
+			return (NULL);
+		ft_strlcpy(full_path, paths[i],len);
+		ft_strlcat(full_path, "/", len);
+		ft_strlcat(full_path, cmd, len);
 		if (access(full_path, X_OK) == 0)
-			return (strdup(full_path));
-	}
-}
-
-static char	**split_path(char *path_env)
-{
-	char	**paths;
-	int		i;
-
-	paths = malloc(sizeof(char *) * 100);
-	if (!paths)
-		return (NULL);
-	paths[0] = strtok(path_env, ":");
-	i = i;
-	while (paths[i - 1] && i < 100)
-	{
-		paths[i] = strtok(NULL, ":");
+			return (full_path);
+		free(full_path);
 		i++;
 	}
-	return (paths);
+	return (NULL);
 }
 
-char	*get_executable_path(char *cmd)
+static void free_paths(char **paths)
 {
-	char	*path_env;
-	char	*default_paths[3];
-	char	*cmd_path;
-	char	*path_dup;
-	char	**paths;
+    int i = 0;
+    if (!paths)
+        return;
+    while (paths[i])
+    {
+        free(paths[i]);
+        i++;
+    }
+    free(paths);
+}
 
-	*default_paths[0] = "/bin";
-	*default_paths[1] = "/usr/bin";
-	*default_paths[2] = NULL;
-	path_env = getenv("PATH");
-	if (!path_env)
-		return (check_directories(cmd, default_paths));
-	path_dup = strdup(path_env);
-	paths = split_path(path_dup);
-	cmd_path = check_directories(cmd, paths);
-	free(path_dup);
-	free(paths);
-	return (cmd_path);
+static char **get_paths_from_env(void)
+{
+    char *path_env;
+    char *path_dup;
+    char **paths;
+
+    path_env = getenv("PATH");
+    if (!path_env)
+        return (NULL);
+    path_dup = ft_strdup(path_env);
+    if (!path_dup)
+        return (NULL);
+    paths = ft_split(path_dup, ':');
+    free(path_dup);
+    return (paths);
+}
+
+char *get_executable_path(char *cmd)
+{
+    char *cmd_path;
+    char **paths;
+    char *default_paths[3];
+
+    default_paths[0] = "/bin";
+    default_paths[1] = "/usr/bin";
+    default_paths[2] = NULL;
+
+    paths = get_paths_from_env();
+    if (!paths)
+        return (check_directories(cmd, default_paths));
+    cmd_path = check_directories(cmd, paths);
+    free_paths(paths);
+    if (cmd_path)
+        return (cmd_path);
+    return (check_directories(cmd, default_paths));
 }

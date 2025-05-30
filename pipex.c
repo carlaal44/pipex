@@ -6,11 +6,12 @@
 /*   By: carfern2 <carfern2@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/13 15:06:54 by carfern2          #+#    #+#             */
-/*   Updated: 2025/03/26 15:15:48 by carfern2         ###   ########.fr       */
+/*   Updated: 2025/05/30 12:22:38 by carfern2         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
+#include "libft.h"
 
 void	create_pipe(int *fd)
 {
@@ -20,38 +21,44 @@ void	create_pipe(int *fd)
 		exit(1);
 	}
 }
-
-int	is_directory(const char *path)
+static void child_exec(char *cmd, char **envp, int *fd, int infile_fd)
 {
-	struct stat		path_stat;
+    char **args;
+    char *cmd_path;
 
-	stat(path, &path_stat);
-	return (S_ISDIR(path_stat.st_mode));
+    args = prepare_args(cmd);
+    if (!args)
+        exit(1);
+    cmd_path = get_executable_path(args[0]);
+    if (!cmd_path)
+    {
+        write(2, "command not found: ", 19);
+        write(2, args[0], ft_strlen(args[0]));
+        write(2, "\n", 1);
+        exit(127);
+    }
+    dup2(infile_fd, STDIN_FILENO);
+    close(infile_fd);
+    setup_child(fd);
+    if (execve(cmd_path, args, envp) == -1)
+    {
+        perror("execve (child)");
+        free(cmd_path);
+        exit(1);
+    }
 }
-
-void	execute_child(int *fd, char *cmd, char **envp, int infile_fd)
+void execute_child(int *fd, char *cmd, char **envp, int infile_fd)
 {
-	pid_t		pid;
-	char		*args[4];
+    pid_t pid;
 
-	prepare_args(cmd, args);
-	pid = fork();
-	if (pid == -1)
-	{
-		perror("fork");
-		exit(1);
-	}
-	if (pid == 0)
-	{
-		dup2(infile_fd, STDIN_FILENO);
-		close(infile_fd);
-		setup_child(fd);
-		if (execve(args[0], args, envp) == -1)
-		{
-			perror("execve (child)");
-			exit(1);
-		}
-	}
+    pid = fork();
+    if (pid == -1)
+    {
+        perror("fork");
+        exit(1);
+    }
+    if (pid == 0)
+        child_exec(cmd, envp, fd, infile_fd);
 }
 
 void	execute_parent(t_pipex *data, char *outfile)
@@ -78,11 +85,6 @@ int	main(int argc, char **argv, char **envp)
 	}
 	data.envp = envp;
 	data.cmd = argv[3];
-	if (is_directory(argv[1]))
-	{
-		write(2, "Error: infile is a directory\n", 29);
-		return (1);
-	}
 	data.infile_fd = open(argv[1], O_RDONLY);
 	if (data.infile_fd < 0)
 	{

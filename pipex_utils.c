@@ -6,11 +6,12 @@
 /*   By: carfern2 <carfern2@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/17 09:04:00 by carfern2          #+#    #+#             */
-/*   Updated: 2025/03/20 16:09:22 by carfern2         ###   ########.fr       */
+/*   Updated: 2025/05/30 12:25:03 by carfern2         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
+#include "libft.h"
 
 void	setup_child(int *fd)
 {
@@ -40,12 +41,9 @@ void	setup_parent(int *fd, int outfile_fd)
 	close(outfile_fd);
 }
 
-void	prepare_args(char *cmd, char **args)
+char	**prepare_args(char *cmd)
 {
-	args[0] = "/bin/sh";
-	args[1] = "-c";
-	args[2] = cmd;
-	args[3] = NULL;
+	return ft_split(cmd, ' ');
 }
 
 int	open_outfile(char *outfile)
@@ -63,13 +61,28 @@ int	open_outfile(char *outfile)
 
 void	setup_parent_execution(t_pipex *data)
 {
-	char	*args[4];
+	char	**args;
+	char	*cmd_path;
+	int		len;
 
-	prepare_args(data->cmd, args);
-	setup_parent(data->fd, data->outfile_fd);
-	if (execv(args[0], args) == -1)
+	args = prepare_args(data->cmd);
+	cmd_path = get_executable_path(args[0]);
+	if (!cmd_path)
 	{
-		perror("execv (parent)");
+		write(2, "command not found: ", 19);
+		len = 0;
+		while (args[0][len])
+			len++;
+		write(2, args[0], len);
+		write(2, "\n", 1);
 		exit(127);
 	}
+	setup_parent(data->fd, data->outfile_fd);
+	if (execve(cmd_path, args, data->envp) ==  -1)
+	{
+		perror("execve (parent)");
+		free(cmd_path);
+		exit(127); 
+	}
 }
+

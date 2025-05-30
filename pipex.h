@@ -6,20 +6,16 @@
 /*   By: carfern2 <carfern2@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/17 09:12:19 by carfern2          #+#    #+#             */
-/*   Updated: 2025/03/26 15:13:00 by carfern2         ###   ########.fr       */
+/*   Updated: 2025/05/30 12:32:10 by carfern2         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef PIPEX_H
 # define PIPEX_H
 
-# include <stdio.h>
-# include <stdlib.h>
-# include <unistd.h>
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <fcntl.h>
-# include <sys/stat.h>
 
 typedef struct s_pipex
 {
@@ -31,13 +27,16 @@ typedef struct s_pipex
 	char	**envp;
 }	t_pipex;
 
-void	create_pipe(int *fd);
-void	execute_child(int *fd, char *cmd, char **envp, int infile_fd);
-void	execute_parent(t_pipex *data, char *outfile);
-void	setup_child(int *fd);
-void	setup_parent(int *fd, int outfile_fd);
-void	prepare_args(char *cmd, char **args);
-int		open_outfile(char *outfile);
-void	setup_parent_execution(t_pipex *data);
+char 			*get_executable_path(char *cmd);
+void			setup_parent_execution(t_pipex *data);
+char			**prepare_args(char *cmd);
+void			setup_parent(int *fd, int outfile_fd);
+void			setup_child(int *fd);
+void			execute_parent(t_pipex *data, char *outfile);
+void 			execute_child(int *fd, char *cmd, char **envp, int infile_fd);
+void			create_pipe(int *fd);
+int				open_outfile(char *outfile);
+
+
 
 #endif
